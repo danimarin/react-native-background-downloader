@@ -26,12 +26,21 @@ RNBackgroundDownloaderEmitter.addListener('downloadBegin', ({ id, ...rest }) => 
 
 RNBackgroundDownloaderEmitter.addListener('downloadProgress', events => {
   log('[RNBackgroundDownloader] downloadProgress-1', events, tasksMap)
-  for (const event of events) {
-    const { id, ...rest } = event
-    const task = tasksMap.get(id)
-    log('[RNBackgroundDownloader] downloadProgress-2', id, task)
-    task?.onProgress(rest)
+  try {
+    for (const event of events) {
+        if (event && typeof(event) === 'object'){
+            const { id, ...rest } = event
+            const task = tasksMap.get(id)
+            log('[RNBackgroundDownloader] downloadProgress-2', id, task)
+            task?.onProgress(rest)
+        }
+
+    }
+
+  } catch(ex){
+    log('[RNBackgroundDownloader] downloadProgress-3', ex);
   }
+
 })
 
 RNBackgroundDownloaderEmitter.addListener('downloadComplete', ({ id, ...rest }) => {
@@ -97,7 +106,7 @@ export function ensureDownloadsAreRunning () {
   return checkForExistingDownloads()
     .then(tasks => {
       for (const task of tasks)
-        if (task.state === 'DOWNLOADING') {
+        if (task?.state === 'DOWNLOADING') {
           task.pause()
           task.resume()
         }

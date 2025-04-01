@@ -1,6 +1,9 @@
 #import "RNBackgroundDownloader.h"
 #import "RNBGDTaskConfig.h"
 #import <MMKV/MMKV.h>
+#ifdef RCT_NEW_ARCH_ENABLED
+#import "<GeneratedSpec>.h"
+#endif
 
 #define ID_TO_CONFIG_MAP_KEY @"com.eko.bgdownloadidmap"
 #define PROGRESS_INTERVAL_KEY @"progressInterval"
@@ -43,10 +46,10 @@ RCT_EXPORT_MODULE();
 
 - (NSArray<NSString *> *)supportedEvents {
     return @[
-        @"downloadBegin",
-        @"downloadProgress",
-        @"downloadComplete",
-        @"downloadFailed"
+        @"RNBdownloadBegin",
+        @"RNBdownloadProgress",
+        @"RNBdownloadComplete",
+        @"RNBdownloadFailed"
     ];
 }
 
@@ -401,7 +404,7 @@ RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rej
             if (self.bridge && isJavascriptLoaded) {
                 if (error == nil) {
                     NSDictionary *responseHeaders = ((NSHTTPURLResponse *)downloadTask.response).allHeaderFields;
-                    [self sendEventWithName:@"downloadComplete" body:@{
+                    [self sendEventWithName:@"RNBdownloadComplete" body:@{
                         @"id": taskConfig.id,
                         @"headers": responseHeaders,
                         @"location": taskConfig.destination,
@@ -409,7 +412,7 @@ RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rej
                         @"bytesTotal": [NSNumber numberWithLongLong:downloadTask.countOfBytesExpectedToReceive]
                     }];
                 } else {
-                    [self sendEventWithName:@"downloadFailed" body:@{
+                    [self sendEventWithName:@"RNBdownloadFailed" body:@{
                         @"id": taskConfig.id,
                         @"error": [error localizedDescription],
                         // TODO
@@ -440,7 +443,7 @@ RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rej
             if (!taskConfig.reportedBegin) {
                 NSDictionary *responseHeaders = ((NSHTTPURLResponse *)downloadTask.response).allHeaderFields;
                 if (self.bridge && isJavascriptLoaded) {
-                    [self sendEventWithName:@"downloadBegin" body:@{
+                    [self sendEventWithName:@"RNBdownloadBegin" body:@{
                         @"id": taskConfig.id,
                         @"expectedBytes": [NSNumber numberWithLongLong: bytesTotalExpectedToWrite],
                         @"headers": responseHeaders
@@ -463,7 +466,7 @@ RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rej
             NSDate *now = [[NSDate alloc] init];
             if ([now timeIntervalSinceDate:lastProgressReportedAt] > progressInterval && progressReports.count > 0) {
                 if (self.bridge && isJavascriptLoaded) {
-                    [self sendEventWithName:@"downloadProgress" body:[progressReports allValues]];
+                    [self sendEventWithName:@"RNBdownloadProgress" body:[progressReports allValues]];
                 }
                 lastProgressReportedAt = now;
                 [progressReports removeAllObjects];
@@ -488,7 +491,7 @@ RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rej
         // Required to continue resume tasks.
         if (error.code != -999) {
             if (self.bridge && isJavascriptLoaded) {
-                [self sendEventWithName:@"downloadFailed" body:@{
+                [self sendEventWithName:@"RNBdownloadFailed" body:@{
                     @"id": taskConfig.id,
                     @"error": [error localizedDescription],
                     // TODO
@@ -628,3 +631,11 @@ RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rej
 }
 
 @end
+
+#ifdef RCT_NEW_ARCH_ENABLED
+ - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
+    (const facebook::react::ObjCTurboModule::InitParams &)params
+ {
+    return std::make_shared<facebook::react::<MyModuleSpecJSI>>(params);
+ }
+#endif

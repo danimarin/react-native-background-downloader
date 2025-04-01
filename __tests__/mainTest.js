@@ -30,7 +30,7 @@ test('begin event', () => {
       expect(beginDT.state).toBe('DOWNLOADING')
       resolve()
     })
-    nativeEmitter.emit('downloadBegin', {
+    nativeEmitter.emit('RNBdownloadBegin', {
       id: 'testBegin',
       expectedBytes: 9001,
       headers: mockedHeaders,
@@ -49,7 +49,7 @@ test('progress event', () => {
       expect(bytesTotal).toBe(200)
       resolve()
     })
-    nativeEmitter.emit('downloadProgress', [{
+    nativeEmitter.emit('RNBdownloadProgress', [{
       id: 'testProgress',
       bytesDownloaded: 100,
       bytesTotal: 200,
@@ -67,7 +67,7 @@ test('done event', () => {
       expect(doneDT.state).toBe('DONE')
       resolve()
     })
-    nativeEmitter.emit('downloadComplete', {
+    nativeEmitter.emit('RNBdownloadComplete', {
       id: 'testDone',
     })
   })
@@ -85,7 +85,7 @@ test('fail event', () => {
       expect(failDT.state).toBe('FAILED')
       resolve()
     })
-    nativeEmitter.emit('downloadFailed', {
+    nativeEmitter.emit('RNBdownloadFailed', {
       id: 'testFail',
       error: new Error('test'),
       errorCode: -1,

@@ -413,7 +413,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule {
     params.putString("id", configId);
     params.putMap("headers", headers);
     params.putDouble("expectedBytes", expectedBytes);
-    ee.emit("downloadBegin", params);
+    ee.emit("RNBdownloadBegin", params);
   }
 
   private void onProgressDownload(String configId, long bytesDownloaded, long bytesTotal) {
@@ -441,7 +441,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule {
           reportsArray.pushMap(report.copy());
         }
       }
-      ee.emit("downloadProgress", reportsArray);
+      ee.emit("RNBdownloadProgress", reportsArray);
       lastProgressReportedAt = now;
       progressReports.clear();
     }
@@ -471,7 +471,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule {
     params.putString("location", config.destination);
     params.putDouble("bytesDownloaded", downloadStatus.getDouble("bytesDownloaded"));
     params.putDouble("bytesTotal", downloadStatus.getDouble("bytesTotal"));
-    ee.emit("downloadComplete", params);
+    ee.emit("RNBdownloadComplete", params);
   }
 
   private void onFailedDownload(RNBGDTaskConfig config, WritableMap downloadStatus) {
@@ -485,7 +485,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule {
     params.putString("id", config.id);
     params.putInt("errorCode", downloadStatus.getInt("reason"));
     params.putString("error", downloadStatus.getString("reasonText"));
-    ee.emit("downloadFailed", params);
+    ee.emit("RNBdownloadFailed", params);
   }
 
   private void saveDownloadIdToConfigMap() {

@@ -1,5 +1,7 @@
 import { NativeModules, NativeEventEmitter } from 'react-native'
-import DownloadTask from './lib/DownloadTask'
+import DownloadTask from './DownloadTask'
+import NativeRNBackgroundDownloader from './NativeRNBackgroundDownloader'
+import { DownloadOptions } from './index.d'
 
 const { RNBackgroundDownloader } = NativeModules
 const RNBackgroundDownloaderEmitter = new NativeEventEmitter(RNBackgroundDownloader)
@@ -26,21 +28,12 @@ RNBackgroundDownloaderEmitter.addListener('RNBdownloadBegin', ({ id, ...rest }) 
 
 RNBackgroundDownloaderEmitter.addListener('RNBdownloadProgress', events => {
   log('[RNBackgroundDownloader] RNBdownloadProgress-1', events, tasksMap)
-  try {
-    for (const event of events) {
-        if (event && typeof(event) === 'object'){
-            const { id, ...rest } = event
-            const task = tasksMap.get(id)
-            log('[RNBackgroundDownloader] RNBdownloadProgress-2', id, task)
-            task?.onProgress(rest)
-        }
-
-    }
-
-  } catch(ex){
-    log('[RNBackgroundDownloader] RNBdownloadProgress-3', ex);
+  for (const event of events) {
+    const { id, ...rest } = event
+    const task = tasksMap.get(id)
+    log('[RNBackgroundDownloader] RNBdownloadProgress-2', id, task)
+    task?.onProgress(rest)
   }
-
 })
 
 RNBackgroundDownloaderEmitter.addListener('RNBdownloadComplete', ({ id, ...rest }) => {
@@ -71,46 +64,43 @@ export function setConfig ({ headers, progressInterval, isLogsEnabled }) {
   if (typeof isLogsEnabled === 'boolean') config.isLogsEnabled = isLogsEnabled
 }
 
-export function checkForExistingDownloads () {
+export async function checkForExistingDownloads () {
   log('[RNBackgroundDownloader] checkForExistingDownloads-1')
-  return RNBackgroundDownloader.checkForExistingDownloads()
-    .then(foundTasks => {
-      log('[RNBackgroundDownloader] checkForExistingDownloads-2', foundTasks)
-      return foundTasks.map(taskInfo => {
-        // SECOND ARGUMENT RE-ASSIGNS EVENT HANDLERS
-        const task = new DownloadTask(taskInfo, tasksMap.get(taskInfo.id))
-        log('[RNBackgroundDownloader] checkForExistingDownloads-3', taskInfo)
+  const foundTasks = await NativeRNBackgroundDownloader.checkForExistingDownloads()
+  log('[RNBackgroundDownloader] checkForExistingDownloads-2', foundTasks)
 
-        if (taskInfo.state === RNBackgroundDownloader.TaskRunning) {
-          task.state = 'DOWNLOADING'
-        } else if (taskInfo.state === RNBackgroundDownloader.TaskSuspended) {
-          task.state = 'PAUSED'
-        } else if (taskInfo.state === RNBackgroundDownloader.TaskCanceling) {
-          task.stop()
-          return null
-        } else if (taskInfo.state === RNBackgroundDownloader.TaskCompleted) {
-          if (taskInfo.bytesDownloaded === taskInfo.bytesTotal)
-            task.state = 'DONE'
-          else
-            // IOS completed the download but it was not done.
-            return null
-        }
-        tasksMap.set(taskInfo.id, task)
-        return task
-      }).filter(task => !!task)
-    })
+  return foundTasks.map(taskInfo => {
+    // SECOND ARGUMENT RE-ASSIGNS EVENT HANDLERS
+    const task = new DownloadTask(taskInfo, tasksMap.get(taskInfo.id))
+    log('[RNBackgroundDownloader] checkForExistingDownloads-3', taskInfo)
+
+    if (taskInfo.state === RNBackgroundDownloader.TaskRunning) {
+      task.state = 'DOWNLOADING'
+    } else if (taskInfo.state === RNBackgroundDownloader.TaskSuspended) {
+      task.state = 'PAUSED'
+    } else if (taskInfo.state === RNBackgroundDownloader.TaskCanceling) {
+      task.stop()
+      return null
+    } else if (taskInfo.state === RNBackgroundDownloader.TaskCompleted) {
+      if (taskInfo.bytesDownloaded === taskInfo.bytesTotal)
+        task.state = 'DONE'
+      else
+        // IOS completed the download but it was not done.
+        return null
+    }
+    tasksMap.set(taskInfo.id, task)
+    return task
+  }).filter(task => !!task)
 }
 
-export function ensureDownloadsAreRunning () {
+export async function ensureDownloadsAreRunning () {
   log('[RNBackgroundDownloader] ensureDownloadsAreRunning')
-  return checkForExistingDownloads()
-    .then(tasks => {
-      for (const task of tasks)
-        if (task?.state === 'DOWNLOADING') {
-          task.pause()
-          task.resume()
-        }
-    })
+  const tasks = await checkForExistingDownloads()
+  for (const task of tasks)
+    if (task.state === 'DOWNLOADING') {
+      task.pause()
+      task.resume()
+    }
 }
 
 export function completeHandler (jobId: string) {
@@ -119,19 +109,7 @@ export function completeHandler (jobId: string) {
     return
   }
 
-  return RNBackgroundDownloader.completeHandler(jobId)
-}
-
-type DownloadOptions = {
-  id: string,
-  url: string,
-  destination: string,
-  headers?: object,
-  metadata?: object,
-  isAllowedOverRoaming?: boolean,
-  isAllowedOverMetered?: boolean,
-  isNotificationVisible?: boolean;
-  notificationTitle?: string,
+  return NativeRNBackgroundDownloader.completeHandler(jobId)
 }
 
 export function download (options: DownloadOptions) {
@@ -156,7 +134,7 @@ export function download (options: DownloadOptions) {
   })
   tasksMap.set(options.id, task)
 
-  RNBackgroundDownloader.download({
+  NativeRNBackgroundDownloader.download({
     ...options,
     metadata: JSON.stringify(options.metadata),
     progressInterval: config.progressInterval,
